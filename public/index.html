@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Clipeer</title>
+
+  <link rel="icon" type="image/png" href="icon.png">
+  <link rel="apple-touch-icon" href="icon.png">
+
+  <style>
+    :root {
+      --bg-window: #1e1e1e;
+      --bg-content: #2a2a2c;
+      --bg-elevated: #323234;
+      --bg-input: #1c1c1e;
+
+      --separator: rgba(255, 255, 255, 0.08);
+      --separator-strong: rgba(255, 255, 255, 0.14);
+      --hairline: rgba(255, 255, 255, 0.10);
+
+      --text: rgba(255, 255, 255, 0.92);
+      --text-secondary: rgba(255, 255, 255, 0.62);
+      --text-tertiary: rgba(255, 255, 255, 0.38);
+      --text-quaternary: rgba(255, 255, 255, 0.22);
+
+      --accent: #0a84ff;
+      --accent-hover: #409cff;
+      --accent-pressed: #0070e0;
+
+      --green: #30d158;
+      --orange: #ff9f0a;
+      --red: #ff453a;
+      --yellow: #ffd60a;
+
+      --radius-card: 10px;
+      --radius-control: 6px;
+      --radius-pill: 999px;
+
+      --titlebar-height: 28px;
+    }
+
+    * { box-sizing: border-box; }
+    [hidden] { display: none !important; }
+    html, body { height: 100%; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display",
+                   "Helvetica Neue", Helvetica, Arial, sans-serif;
+      font-size: 13px;
+      line-height: 1.47059;
+      letter-spacing: -0.01em;
+      color: var(--text);
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+      background: var(--bg-window);
+      -webkit-font-smoothing: antialiased;
+      overflow: hidden;
+    }
+
+    /* ============ TITLEBAR DRAG AREA ============ */
+    .drag-region {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: var(--titlebar-height);
+      -webkit-app-region: drag;
+      app-region: drag;
+      z-index: 10;
+      pointer-events: none;
+    }
+
+    /* ============ LAYOUT ============ */
+    .app {
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      padding-top: var(--titlebar-height);
+    }
+
+    .content {
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow-y: auto;
+      padding: 16px 20px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    ::-webkit-scrollbar { width: 10px; height: 10px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.18);
+      border-radius: 10px;
+      border: 2px solid transparent;
+      background-clip: padding-box;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.28);
+      background-clip: padding-box;
+    }
+
+    /* ============ HEADER APP ============ */
+    .app-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding-bottom: 4px;
+    }
+
+    /* L'icona ha già il suo design (squircle + gradiente + ombra) */
+    .app-icon {
+      width: 48px;
+      height: 48px;
+      flex-shrink: 0;
+    }
+    .app-icon img {
+      width: 100%;
+      height: 100%;
+      display: block;
+      object-fit: contain;
+      user-select: none;
+      -webkit-user-drag: none;
+    }
+
+    .app-titles h1 {
+      font-size: 15px;
+      margin: 0;
+      font-weight: 600;
+      letter-spacing: -0.015em;
+      color: var(--text);
+    }
+    .app-titles p {
+      margin: 1px 0 0;
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    /* ============ CARD / GROUPED BOX ============ */
+    .card {
+      background: var(--bg-content);
+      border-radius: var(--radius-card);
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25), 0 0 0 0.5px var(--hairline);
+      overflow: hidden;
+    }
+    .card-padded { padding: 14px 16px; }
+
+    .grouped-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 16px;
+    }
+    .grouped-row + .grouped-row {
+      border-top: 0.5px solid var(--separator);
+    }
+
+    .status-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--text);
+      font-size: 13px;
+    }
+    .status-label svg {
+      width: 15px;
+      height: 15px;
+      color: var(--text-secondary);
+      stroke-width: 1.8;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 10px;
+      border-radius: var(--radius-pill);
+      font-size: 11px;
+      font-weight: 500;
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text);
+    }
+    .badge::before {
+      content: "";
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: currentColor;
+      box-shadow: 0 0 6px currentColor;
+    }
+    .badge.disconnected { color: var(--orange); }
+    .badge.connected    { color: var(--green); }
+
+    #peerCount {
+      font-size: 15px;
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .section-title {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-tertiary);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin: 0 2px 6px;
+    }
+
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: var(--text-tertiary);
+      font-size: 11px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin: 6px 2px;
+    }
+    .divider::before, .divider::after {
+      content: "";
+      flex: 1;
+      height: 0.5px;
+      background: var(--separator-strong);
+    }
+
+    input[type="text"] {
+      flex: 1;
+      min-width: 0;
+      padding: 7px 10px;
+      background: var(--bg-input);
+      border: 0.5px solid var(--separator-strong);
+      border-radius: var(--radius-control);
+      color: var(--text);
+      font-size: 13px;
+      font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+      transition: border-color 0.12s, box-shadow 0.12s;
+      outline: none;
+      -webkit-appearance: none;
+    }
+    input[type="text"]::placeholder { color: var(--text-quaternary); }
+    input[type="text"]:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3.5px rgba(10, 132, 255, 0.35);
+    }
+
+    /* ============ BOTTONI ============ */
+    button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 5px 12px;
+      height: 26px;
+      border: 0.5px solid transparent;
+      border-radius: var(--radius-control);
+      background: var(--accent);
+      color: #fff;
+      font-weight: 500;
+      font-size: 13px;
+      font-family: inherit;
+      letter-spacing: -0.005em;
+      cursor: pointer;
+      transition: background 0.08s, box-shadow 0.12s, transform 0.05s;
+      user-select: none;
+      -webkit-app-region: no-drag;
+      box-shadow:
+        0 0.5px 1px rgba(0, 0, 0, 0.25),
+        inset 0 0.5px 0 rgba(255, 255, 255, 0.18);
+    }
+    button:hover  { background: var(--accent-hover); }
+    button:active { background: var(--accent-pressed); transform: scale(0.985); }
+    button:focus-visible {
+      outline: none;
+      box-shadow: 0 0 0 3.5px rgba(10, 132, 255, 0.45);
+    }
+    button svg { width: 14px; height: 14px; stroke-width: 2.2; }
+
+    button.secondary {
+      background: var(--bg-elevated);
+      color: var(--text);
+      border-color: var(--separator-strong);
+      box-shadow:
+        0 0.5px 1px rgba(0, 0, 0, 0.2),
+        inset 0 0.5px 0 rgba(255, 255, 255, 0.06);
+    }
+    button.secondary:hover  { background: #3a3a3c; }
+    button.secondary:active { background: #2e2e30; }
+
+    button.danger {
+      background: transparent;
+      color: var(--red);
+      border-color: rgba(255, 69, 58, 0.35);
+      box-shadow: none;
+    }
+    button.danger:hover  { background: rgba(255, 69, 58, 0.10); }
+    button.danger:active { background: rgba(255, 69, 58, 0.18); }
+
+    button.full { width: 100%; height: 30px; }
+
+    .row { display: flex; gap: 8px; }
+
+    .hint {
+      font-size: 11.5px;
+      color: var(--text-secondary);
+      margin: 8px 2px 0;
+      line-height: 1.45;
+    }
+
+    /* ============ CODE BOX ============ */
+    #codeBox {
+      font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+      font-size: 14px;
+      font-weight: 500;
+      background: var(--bg-input);
+      border: 0.5px solid var(--separator-strong);
+      border-radius: var(--radius-control);
+      padding: 12px;
+      margin: 8px 0 10px;
+      text-align: center;
+      word-break: break-all;
+      user-select: all;
+      color: var(--text);
+      letter-spacing: 0.01em;
+      cursor: pointer;
+      transition: border-color 0.12s;
+    }
+    #codeBox:hover { border-color: rgba(10, 132, 255, 0.5); }
+
+    /* ============ LOG ============ */
+    .log-card {
+      flex: 1 1 0;
+      min-height: 150px;
+      display: flex;
+      flex-direction: column;
+    }
+    .log-header {
+      display: flex;
+      align-items: center;
+      padding: 8px 16px;
+      border-bottom: 0.5px solid var(--separator);
+      flex-shrink: 0;
+    }
+    .log-title {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-tertiary);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .log-title svg {
+      width: 13px;
+      height: 13px;
+      color: var(--text-tertiary);
+      stroke-width: 2;
+    }
+
+    #logs {
+      flex: 1 1 0;
+      min-height: 0;
+      background: var(--bg-input);
+      padding: 10px 14px;
+      font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+      font-size: 11.5px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      line-height: 1.55;
+      color: var(--text-secondary);
+    }
+    #logs .line { display: block; }
+    #logs .line.error   { color: #ff6961; }
+    #logs .line.success { color: var(--green); }
+    #logs .line.warn    { color: var(--yellow); }
+
+    @media (max-width: 480px) {
+      .content { padding: 12px 16px 16px; }
+      .app-icon { width: 42px; height: 42px; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="drag-region" aria-hidden="true"></div>
+
+  <div class="app">
+    <div class="content">
+
+      <div class="app-header">
+        <div class="app-icon">
+          <img src="icon.png" alt="Clipeer" draggable="false">
+        </div>
+        <div class="app-titles">
+          <h1>Clipeer</h1>
+          <p>P2P clipboard sync</p>
+        </div>
+      </div>
+
+      <!-- Network status -->
+      <div class="card">
+        <div class="grouped-row">
+          <span class="status-label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>
+            Network status
+          </span>
+          <span id="statusBadge" class="badge disconnected">Waiting</span>
+        </div>
+        <div class="grouped-row">
+          <span class="status-label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            Connected peers
+          </span>
+          <strong id="peerCount">0</strong>
+        </div>
+      </div>
+
+      <!-- No active session -->
+      <div class="card card-padded" id="setup">
+        <button id="generateBtn" class="full">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+          Generate new code
+        </button>
+        <p class="hint">Create a session on this device, then enter the code on the others.</p>
+
+        <div class="divider">or</div>
+
+        <div class="section-title">Join with a code</div>
+        <div class="row">
+          <input type="text" id="joinInput" placeholder="word-word-word-word-word-word" autocomplete="off" spellcheck="false">
+          <button id="joinBtn" class="secondary">Join</button>
+        </div>
+      </div>
+
+      <!-- Active session -->
+      <div class="card card-padded" id="active" hidden>
+        <div class="section-title">Session code</div>
+        <div id="codeBox"></div>
+        <div class="row">
+          <button id="copyBtn" class="secondary" style="flex: 1;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            Copy code
+          </button>
+          <button id="resetBtn" class="danger" style="flex: 1;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+            End session
+          </button>
+        </div>
+        <p class="hint">Enter this code on your other devices. Anyone who knows it can read the shared clipboard: don't share it.</p>
+      </div>
+
+      <!-- Log -->
+      <div class="card log-card">
+        <div class="log-header">
+          <span class="log-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 14 15 20 9"/><polyline points="14 9 20 9 20 15"/></svg>
+            Recent activity
+          </span>
+        </div>
+        <div id="logs"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const setupEl = $('setup');
+    const activeEl = $('active');
+    const codeBox = $('codeBox');
+    const joinInput = $('joinInput');
+    const statusBadge = $('statusBadge');
+    const peerCountEl = $('peerCount');
+    const logsEl = $('logs');
+
+    let active = false;
+    const MAX_LOG_LINES = 100;
+    const logLines = [];
+
+    function classifyLog(text) {
+      if (/\[!\]|error|errore|fail/i.test(text)) return 'error';
+      if (/\[✓\]|success|successo|creat|avviat/i.test(text)) return 'success';
+      if (/\[~\]|warn|attenzione/i.test(text)) return 'warn';
+      return 'info';
+    }
+
+    function appendLog(text) {
+      logLines.push(text);
+      if (logLines.length > MAX_LOG_LINES) logLines.shift();
+      logsEl.innerHTML = logLines.map((line) => {
+        const cls = classifyLog(line);
+        return `<span class="line ${cls}">${escapeHtml(line)}</span>`;
+      }).join('');
+      logsEl.scrollTop = logsEl.scrollHeight;
+    }
+
+    function escapeHtml(s) {
+      return s.replace(/[&<>"']/g, (c) => ({
+        '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+      }[c]));
+    }
+
+    function setPeers(n) {
+      peerCountEl.textContent = n;
+      if (!active) {
+        statusBadge.textContent = 'Waiting';
+        statusBadge.className = 'badge disconnected';
+      } else if (n > 0) {
+        statusBadge.textContent = 'Connected · ' + n + (n === 1 ? ' peer' : ' peers');
+        statusBadge.className = 'badge connected';
+      } else {
+        statusBadge.textContent = 'Listening…';
+        statusBadge.className = 'badge disconnected';
+      }
+    }
+
+    function showSession(code, peers) {
+      active = true;
+      codeBox.textContent = code;
+      setupEl.hidden = true;
+      activeEl.hidden = false;
+      setPeers(peers || 0);
+    }
+
+    function showSetup() {
+      active = false;
+      codeBox.textContent = '';
+      joinInput.value = '';
+      setupEl.hidden = false;
+      activeEl.hidden = true;
+      setPeers(0);
+    }
+
+    async function post(path, body) {
+      const res = await fetch(path, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body || {})
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Error');
+      return data;
+    }
+
+    fetch('/api/status')
+      .then((res) => res.json())
+      .then((data) => { if (data.hasSecret) showSession(data.code, data.peers); });
+
+    $('generateBtn').addEventListener('click', async () => {
+      try {
+        const { code } = await post('/api/generate');
+        showSession(code, 0);
+        appendLog('[*] New session created.');
+      } catch (err) {
+        alert(err.message);
+      }
+    });
+
+    async function join() {
+      const secret = joinInput.value.trim();
+      if (!secret) return;
+      try {
+        const { code } = await post('/api/start', { secret });
+        showSession(code, 0);
+        appendLog('[*] Clipeer started successfully.');
+      } catch (err) {
+        alert(err.message);
+      }
+    }
+    $('joinBtn').addEventListener('click', join);
+    joinInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') join(); });
+
+    $('copyBtn').addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(codeBox.textContent);
+        $('copyBtn').textContent = 'Copied!';
+        setTimeout(() => { $('copyBtn').textContent = 'Copy code'; }, 1500);
+      } catch {
+        alert('Copy failed: select the code and copy it manually.');
+      }
+    });
+
+    $('resetBtn').addEventListener('click', async () => {
+      if (!confirm('End the session? You will need to pair your devices again.')) return;
+      try {
+        await post('/api/reset');
+        showSetup();
+      } catch (err) {
+        alert(err.message);
+      }
+    });
+
+    const evtSource = new EventSource('/api/events');
+    evtSource.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      if (data.type === 'log') {
+        appendLog(data.msg);
+      } else if (data.type === 'status') {
+        setPeers(data.peers);
+      }
+    };
+  </script>
+</body>
+</html>
