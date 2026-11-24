@@ -1,6 +1,6 @@
 {
   "name": "clipeer",
-  "version": "1.2.0",
+  "version": "0.3.3",
   "description": "P2P shared clipboard with a local web interface",
   "type": "module",
   "main": "main.js",
@@ -8,7 +8,8 @@
     "start": "electron .",
     "dist:mac": "electron-builder --mac --arm64 --x64 --publish never",
     "dist:linux": "electron-builder --linux AppImage --x64 --publish never",
-    "dist:win": "electron-builder --win --x64 --publish never"
+    "dist:win": "electron-builder --win --x64 --publish never",
+    "release": "bash scripts/release.sh"
   },
   "dependencies": {
     "clipboardy": "^4.0.0",
@@ -22,7 +23,7 @@
   "build": {
     "appId": "com.Omikron-TNS.clipeer",
     "productName": "Clipeer",
-    "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
+    "artifactName": "${productName}-${os}-${arch}.${ext}",
     "files": [
       "main.js",
       "index.js",

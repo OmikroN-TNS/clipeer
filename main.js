@@ -33,6 +33,7 @@ function buildMenu () {
     : [{ label: 'Nothing copied yet', enabled: false }]
 
   return Menu.buildFromTemplate([
+    { label: `Clipeer v${app.getVersion()}`, enabled: false },
     { label: `Connected devices: ${getPeerCount()}`, enabled: false },
     { type: 'separator' },
     ...items,
@@ -144,7 +145,7 @@ function init () {
     const icon = nativeImage.createFromPath(path.join(__dirname, 'build', 'icon.png'))
     tray = new Tray(icon.resize({ width: size, height: size }))
   }
-  tray.setToolTip('Clipeer')
+  tray.setToolTip(`Clipeer v${app.getVersion()}`)
   setupTrayClicks()
   refreshMenu()
   events.on('history', refreshMenu)
