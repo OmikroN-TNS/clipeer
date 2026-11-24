@@ -19,7 +19,9 @@ Get the latest build from the **[Releases](../../releases)** page:
 
 The builds are **not code-signed**, so your system will warn you the first time:
 
-- **macOS:** right-click the app → *Open*, or run `xattr -cr /Applications/Clipeer.app`.
+- **macOS:** the app is ad-hoc signed, not notarized. Open it once, then go to *System Settings → Privacy & Security*
+  and click *Open Anyway*. If macOS says the app is damaged, run
+  `xattr -cr /Applications/Clipeer.app` and open it again.
 - **Windows:** SmartScreen → *More info* → *Run anyway*.
 - **Linux:** make the file executable (`chmod +x Clipeer-*.AppImage`). On Wayland, install `wl-clipboard`
   (version 2.3 or newer on KDE Plasma 6.5+).

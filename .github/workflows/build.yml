@@ -27,9 +27,9 @@ jobs:
             artifact: clipeer-windows
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: 22
           cache: npm
@@ -44,11 +44,8 @@ jobs:
 
       - name: Build
         run: npm run ${{ matrix.script }}
-        env:
-          # no signing certificate: stops electron-builder from looking for one
-          CSC_IDENTITY_AUTO_DISCOVERY: "false"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: ${{ matrix.artifact }}
           path: |
@@ -65,12 +62,12 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         with:
           path: release
           merge-multiple: true
 
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@v3
         with:
           files: release/*
           generate_release_notes: true
