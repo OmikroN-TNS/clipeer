@@ -8,20 +8,18 @@ message is end-to-end encrypted with a key derived from your session code.
 
 ## Screenshots
 
-<table>
-  <tr>
-    <td align="center"><img src="docs/screenshots/pairing.png" alt="Clipeer pairing screen: generate a code or join with one" width="300"></td>
-    <td align="center"><img src="docs/screenshots/session.png" alt="Clipeer with an active session and two connected devices" width="300"></td>
-  </tr>
-  <tr>
-    <td align="center">Pairing a new device</td>
-    <td align="center">Active session with two devices</td>
-  </tr>
-</table>
+<p align="center">
+  <img src="docs/screenshots/pairing.png" alt="Clipeer pairing screen: generate a code or join with one" width="280">
+  &nbsp;&nbsp;&nbsp;
+  <img src="docs/screenshots/session.png" alt="Clipeer with an active session and two connected devices" width="280">
+  <br>
+  <sub>Pairing a new device &nbsp;·&nbsp; Active session with two devices</sub>
+</p>
 
 <p align="center">
-  <img src="docs/screenshots/tray.png" alt="Clipeer tray menu with the history of the last copied items" width="400"><br>
-  Tray menu with the last copied items (illustration)
+  <img src="docs/screenshots/tray.png" alt="Clipeer tray menu with the history of the last copied items" width="380">
+  <br>
+  <sub>Tray menu with the last copied items (illustration)</sub>
 </p>
 
 ## Download
