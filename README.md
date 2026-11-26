@@ -11,9 +11,9 @@ message is end-to-end encrypted with a key derived from your session code.
 <p align="center">
   <img src="docs/screenshots/pairing.png" alt="Clipeer pairing screen: generate a code or join with one" width="280">
   &nbsp;&nbsp;&nbsp;
-  <img src="docs/screenshots/session.png" alt="Clipeer with an active session and two connected devices" width="280">
+  <img src="docs/screenshots/session.png" alt="Clipeer with an active session, two connected devices and the session code hidden" width="280">
   <br>
-  <sub>Pairing a new device &nbsp;·&nbsp; Active session with two devices</sub>
+  <sub>Pairing a new device &nbsp;·&nbsp; Active session (the code is hidden until you click Show)</sub>
 </p>
 
 <p align="center">
@@ -55,6 +55,10 @@ see the last 10 copied items, or quit.
 ## Security notes
 
 - Anyone who knows the session code can read the shared clipboard. Don't share it, and use **End session** to discard it.
+- The code is hidden in the window by default and hides again 10 seconds after you reveal it. It is never added to the
+  clipboard history shown in the tray.
+- The local server behind the window requires a random token generated at every launch, so other programs and users on
+  the same computer cannot read the code from it.
 - The code is stored in plain text: `%APPDATA%\Clipeer\secret` on Windows, `~/.clipeer/secret` on macOS and Linux
   (override the folder with `CLIPEER_DIR`).
 - Only text is synced, up to 1 MB per item. The history shown in the tray is kept in memory only.

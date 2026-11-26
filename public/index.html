@@ -330,6 +330,7 @@
       transition: border-color 0.12s;
     }
     #codeBox:hover { border-color: rgba(10, 132, 255, 0.5); }
+    #codeBox.masked { letter-spacing: 0.3em; user-select: none; cursor: default; }
 
     /* ============ LOG ============ */
     .log-card {
@@ -442,6 +443,10 @@
         <div class="section-title">Session code</div>
         <div id="codeBox"></div>
         <div class="row">
+          <button id="revealBtn" class="secondary" style="flex: 1;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+            <span>Show</span>
+          </button>
           <button id="copyBtn" class="secondary" style="flex: 1;">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
             Copy code
@@ -451,7 +456,7 @@
             End session
           </button>
         </div>
-        <p class="hint">Enter this code on your other devices. Anyone who knows it can read the shared clipboard: don't share it.</p>
+        <p class="hint">Enter this code on your other devices. Anyone who knows it can read the shared clipboard: don't share it. The code is hidden by default and hides again after 10 seconds.</p>
       </div>
 
       <!-- Log -->
@@ -519,9 +524,48 @@
       }
     }
 
-    function showSession(code, peers) {
+    // The session code is kept in a variable, not in the page: it is only written to the
+    // DOM while it is revealed, and it is masked again after REVEAL_MS.
+    const REVEAL_MS = 10000;
+    const MASK = '\u2022'.repeat(24);
+    const revealLabel = $('revealBtn').querySelector('span');
+    let sessionCode = '';
+    let hideTimer = null;
+    let countdownTimer = null;
+
+    function setCodeVisible(visible) {
+      clearTimeout(hideTimer);
+      clearInterval(countdownTimer);
+      const show = visible && sessionCode !== '';
+      codeBox.classList.toggle('masked', !show);
+      codeBox.textContent = !sessionCode ? '' : (show ? sessionCode : MASK);
+      if (!show) {
+        revealLabel.textContent = 'Show';
+        return;
+      }
+      let left = REVEAL_MS / 1000;
+      revealLabel.textContent = 'Hide (' + left + ')';
+      countdownTimer = setInterval(() => {
+        left -= 1;
+        if (left > 0) revealLabel.textContent = 'Hide (' + left + ')';
+      }, 1000);
+      hideTimer = setTimeout(() => setCodeVisible(false), REVEAL_MS);
+    }
+
+    $('revealBtn').addEventListener('click', () => {
+      setCodeVisible(codeBox.classList.contains('masked'));
+    });
+
+    // Mask the code as soon as the window is hidden (closed to the tray, minimized...)
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) setCodeVisible(false);
+    });
+
+    // reveal = true only right after generating a new code, so it can be passed to other devices
+    function showSession(code, peers, reveal) {
       active = true;
-      codeBox.textContent = code;
+      sessionCode = code;
+      setCodeVisible(!!reveal);
       setupEl.hidden = true;
       activeEl.hidden = false;
       setPeers(peers || 0);
@@ -529,7 +573,8 @@
 
     function showSetup() {
       active = false;
-      codeBox.textContent = '';
+      sessionCode = '';
+      setCodeVisible(false);
       joinInput.value = '';
       setupEl.hidden = false;
       activeEl.hidden = true;
@@ -554,7 +599,7 @@
     $('generateBtn').addEventListener('click', async () => {
       try {
         const { code } = await post('/api/generate');
-        showSession(code, 0);
+        showSession(code, 0, true);
         appendLog('[*] New session created.');
       } catch (err) {
         alert(err.message);
@@ -577,9 +622,11 @@
 
     $('copyBtn').addEventListener('click', async () => {
       try {
-        await navigator.clipboard.writeText(codeBox.textContent);
-        $('copyBtn').textContent = 'Copied!';
-        setTimeout(() => { $('copyBtn').textContent = 'Copy code'; }, 1500);
+        await navigator.clipboard.writeText(sessionCode);
+        const btn = $('copyBtn');
+        const original = btn.innerHTML;
+        btn.textContent = 'Copied!';
+        setTimeout(() => { btn.innerHTML = original; }, 1500);
       } catch {
         alert('Copy failed: select the code and copy it manually.');
       }

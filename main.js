@@ -4,11 +4,10 @@ import path from 'node:path'
 import fs from 'node:fs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const APP_URL = 'http://127.0.0.1:3000'
 let win, tray
 // Filled in after the single-instance check (see the end of this file):
 // index.js starts the local server, so it must only be loaded by the first instance.
-let events, getHistory, clearHistory, copyToClipboard, getPeerCount, hasSession
+let events, getHistory, clearHistory, copyToClipboard, getPeerCount, hasSession, getAppUrl
 let quitting = false
 const startedAt = Date.now()
 
@@ -118,8 +117,8 @@ function init () {
   win.once('ready-to-show', () => {
     if (!hasSession()) showWindow()
   })
-  win.webContents.on('did-fail-load', () => setTimeout(() => win.loadURL(APP_URL), 300))
-  win.loadURL(APP_URL)
+  win.webContents.on('did-fail-load', () => setTimeout(() => win.loadURL(getAppUrl()), 300))
+  win.loadURL(getAppUrl())
 
   // the X button hides the window; "Quit" from the menu really closes the app
   win.on('close', (e) => {
@@ -163,7 +162,7 @@ app.on('activate', () => {
 if (!app.requestSingleInstanceLock()) {
   app.quit()
 } else {
-  ;({ events, getHistory, clearHistory, copyToClipboard, getPeerCount, hasSession } = await import('./index.js'))
+  ;({ events, getHistory, clearHistory, copyToClipboard, getPeerCount, hasSession, getAppUrl } = await import('./index.js'))
   app.on('second-instance', () => { if (win) showWindow() })
   app.whenReady().then(init)
 }

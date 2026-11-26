@@ -1,6 +1,6 @@
 {
   "name": "clipeer",
-  "version": "0.3.3",
+  "version": "0.3.4",
   "description": "P2P shared clipboard with a local web interface",
   "type": "module",
   "main": "main.js",

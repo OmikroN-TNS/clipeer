@@ -37,6 +37,31 @@ const LEGACY_SECRET_FILES = [
 const app = express()
 const server = http.createServer(app)
 
+// Per-launch access token. It only exists in memory: the app window receives it through
+// getAppUrl() and the server turns it into a cookie. Without it, any other program (or
+// user) on this computer could query the local server, including /api/status which
+// returns the session code.
+const AUTH_TOKEN = crypto.randomBytes(32).toString('hex')
+const AUTH_COOKIE = 'clipeer_auth'
+
+function tokenMatches (candidate) {
+  if (typeof candidate !== 'string') return false
+  const a = Buffer.from(candidate)
+  const b = Buffer.from(AUTH_TOKEN)
+  return a.length === b.length && crypto.timingSafeEqual(a, b)
+}
+
+function readCookie (req, name) {
+  for (const part of (req.headers.cookie || '').split(';')) {
+    const i = part.indexOf('=')
+    if (i > 0 && part.slice(0, i).trim() === name) return part.slice(i + 1).trim()
+  }
+  return null
+}
+
+// URL that the app window must open (it carries the token once)
+export function getAppUrl () { return `http://127.0.0.1:${PORT}/?t=${AUTH_TOKEN}` }
+
 // Protection against DNS rebinding and cross-site requests to the local server
 app.use((req, res, next) => {
   const host = req.headers.host
@@ -44,6 +69,17 @@ app.use((req, res, next) => {
   const origin = req.headers.origin
   if (origin && origin !== `http://${host}`) return res.status(403).end()
   next()
+})
+
+// Access token: a valid cookie passes; a valid ?t=<token> sets the cookie and redirects
+// to the same path without the token; everything else is rejected.
+app.use((req, res, next) => {
+  if (tokenMatches(readCookie(req, AUTH_COOKIE))) return next()
+  if (req.method === 'GET' && tokenMatches(req.query.t)) {
+    res.setHeader('Set-Cookie', `${AUTH_COOKIE}=${AUTH_TOKEN}; Path=/; HttpOnly; SameSite=Strict`)
+    return res.redirect(302, req.path)
+  }
+  res.status(401).type('text/plain').send('Unauthorized')
 })
 
 app.use(express.json({ limit: '4kb' }))
@@ -169,6 +205,7 @@ export function clearHistory () {
 
 function pushHistory (text, source) {
   if (!text || !text.trim()) return
+  if (currentSecret && text.trim() === currentSecret) return // never list the session code
   const i = clipHistory.findIndex((e) => e.text === text)
   if (i >= 0) clipHistory.splice(i, 1) // no duplicates: the entry moves to the top
   clipHistory.unshift({ text, source, at: Date.now() })
@@ -472,5 +509,5 @@ if (currentSecret.length >= MIN_SECRET) {
 
 server.listen(PORT, HOST, () => {
   console.log('Clipeer started!')
-  console.log(`Open your browser at: http://localhost:${PORT}`)
+  console.log(`Open your browser at: ${getAppUrl()}`)
 })
