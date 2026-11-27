@@ -1,10 +1,11 @@
-import { app, BrowserWindow, Tray, Menu, nativeImage, nativeTheme } from 'electron'
+import { app, BrowserWindow, Tray, Menu, nativeImage, nativeTheme, shell } from 'electron'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import fs from 'node:fs'
+import { createUpdater } from './updater.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-let win, tray
+let win, tray, updater
 // Filled in after the single-instance check (see the end of this file):
 // index.js starts the local server, so it must only be loaded by the first instance.
 let events, getHistory, clearHistory, copyToClipboard, getPeerCount, hasSession, getAppUrl
@@ -22,6 +23,27 @@ function preview (text) {
   return process.platform === 'darwin' ? cut : cut.replace(/&/g, '&&')
 }
 
+// Entry of the menu that follows the update state (see updater.js)
+function updateMenuItems () {
+  if (!updater) return []
+  const s = updater.getState()
+  if (s.mode === 'off') return []
+  switch (s.status) {
+    case 'checking':
+      return [{ label: 'Checking for updates…', enabled: false }]
+    case 'downloading':
+      return [{ label: `Downloading update v${s.version}… ${s.percent}%`, enabled: false }]
+    case 'ready':
+      return [{ label: `Restart to install v${s.version}`, click: () => updater.activate() }]
+    case 'available':
+      return [{ label: `Update available: v${s.version} (download)`, click: () => updater.activate() }]
+    case 'error':
+      return [{ label: 'Update check failed: try again', click: () => updater.checkNow() }]
+    default:
+      return [{ label: 'Check for updates', click: () => updater.checkNow() }]
+  }
+}
+
 function buildMenu () {
   const history = getHistory()
   const items = history.length
@@ -34,6 +56,7 @@ function buildMenu () {
   return Menu.buildFromTemplate([
     { label: `Clipeer v${app.getVersion()}`, enabled: false },
     { label: `Connected devices: ${getPeerCount()}`, enabled: false },
+    ...updateMenuItems(),
     { type: 'separator' },
     ...items,
     ...(history.length ? [{ label: 'Clear history', click: clearHistory }] : []),
@@ -149,6 +172,10 @@ function init () {
   refreshMenu()
   events.on('history', refreshMenu)
   events.on('peers', refreshMenu)
+
+  updater = createUpdater({ app, shell, onChange: refreshMenu })
+  updater.start()
+  refreshMenu()
 }
 
 // macOS emits 'activate' at launch too: ignore it then, otherwise the window

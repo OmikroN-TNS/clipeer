@@ -1,6 +1,6 @@
 {
   "name": "clipeer",
-  "version": "0.3.4",
+  "version": "0.3.5",
   "description": "P2P shared clipboard with a local web interface",
   "type": "module",
   "main": "main.js",
@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "clipboardy": "^4.0.0",
+    "electron-updater": "^6.8.11",
     "express": "^4.19.2",
     "hyperswarm": "^4.8.0"
   },
@@ -27,6 +28,7 @@
     "files": [
       "main.js",
       "index.js",
+      "updater.js",
       "words.js",
       "public/**",
       "build/**"
@@ -49,6 +51,13 @@
       "icon": "build/icon.png",
       "category": "Utility"
     },
-    "npmRebuild": false
+    "npmRebuild": false,
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "OmikroN-TNS",
+        "repo": "clipeer"
+      }
+    ]
   }
 }
